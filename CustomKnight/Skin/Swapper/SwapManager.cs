@@ -3,6 +3,8 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using CustomKnight.Skin.Swapper;
 using static Satchel.IoUtils;
+using System.Reflection;
+using MonoMod.RuntimeDetour;
 
 namespace CustomKnight
 {
@@ -35,6 +37,7 @@ namespace CustomKnight
         internal Dictionary<string, Dictionary<string, GameObjectProxy>> Scenes;
         internal List<string> currentSkinnedSceneObjs;
         internal Dictionary<string, Texture2D> loadedTextures;
+        private Hook _tk2dSpriteAwakeHook;
 
         /// <summary>
         /// store the default textures for each material to be able to restore later
@@ -99,7 +102,17 @@ namespace CustomKnight
             ModHooks.HeroUpdateHook += checkForMissedObjects;
             UnityEngine.SceneManagement.SceneManager.sceneLoaded += SwapSkinForScene;
             On.HutongGames.PlayMaker.Actions.ActivateGameObject.DoActivateGameObject += ActivateGameObject;
-            On.tk2dSprite.Awake += tk2dSpriteAwake;
+            var tk2dAwake = typeof(tk2dSprite).GetMethod(
+                  "Awake",
+                  BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic
+              );
+            if (tk2dAwake != null)
+            {
+                _tk2dSpriteAwakeHook = new Hook(
+                    tk2dAwake,
+                    (Action<Action<tk2dSprite>, tk2dSprite>)tk2dSpriteAwake
+                );
+            }
             On.SetTextMeshProGameText.Awake += SetTextMeshProGameText_Awake;
             activationCoro = CoroutineHelper.GetRunner().StartCoroutine(ActivationCoroutine());
         }
@@ -109,7 +122,8 @@ namespace CustomKnight
             ModHooks.HeroUpdateHook -= checkForMissedObjects;
             UnityEngine.SceneManagement.SceneManager.sceneLoaded -= SwapSkinForScene;
             On.HutongGames.PlayMaker.Actions.ActivateGameObject.DoActivateGameObject -= ActivateGameObject;
-            On.tk2dSprite.Awake -= tk2dSpriteAwake;
+            _tk2dSpriteAwakeHook?.Dispose();
+            _tk2dSpriteAwakeHook = null;
             On.SetTextMeshProGameText.Awake -= SetTextMeshProGameText_Awake;
             if (activationCoro != null)
             {
@@ -724,7 +738,7 @@ namespace CustomKnight
                 }
             }
         }
-        internal void tk2dSpriteAwake(On.tk2dSprite.orig_Awake orig, tk2dSprite self)
+        internal void tk2dSpriteAwake(Action<tk2dSprite> orig, tk2dSprite self)
         {
             orig(self);
             if (active || enabled)

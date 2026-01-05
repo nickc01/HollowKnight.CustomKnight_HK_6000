@@ -2,6 +2,9 @@ using System.IO;
 using CustomKnight.Skin.Cinematics;
 using UnityEngine.Video;
 using static Satchel.IoUtils;
+using System.Reflection;
+using MonoMod.RuntimeDetour;
+using TeamCherry.Cinematics;
 /*
 video : StagTunnelRun:Assets/Cinematics/Stag_tunnel_run_v03.mp4
 video : CharmSlugKiss:Assets/Cinematics/Charm_Slug_Kiss_30fps.mov
@@ -42,11 +45,26 @@ namespace CustomKnight
             {"MaskShatter", new Cinematic("MaskShatter")}
         };
 
+        private static Hook _cinematicVideoPlayerCreateHook;
+
         internal static void Hook()
         {
             On.CinematicSequence.Update += CinematicSequence_Update;
             CinematicHelper.get_EmbeddedVideoClip += WithOrig_get_EmbeddedVideoClip;
-            On.XB1CinematicVideoPlayer.ctor += XB1CinematicVideoPlayer_ctor;
+
+            MethodInfo mi = typeof(CinematicVideoPlayer).GetMethod(
+                "Create",
+                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static
+            );
+
+            if (mi != null)
+            {
+                _cinematicVideoPlayerCreateHook = new Hook(
+                    mi,
+                    (Func<Func<CinematicVideoPlayerConfig, CinematicVideoPlayer>, CinematicVideoPlayerConfig,
+        CinematicVideoPlayer>)CinematicVideoPlayer_Create
+                );
+            }
         }
 
         private static bool GetCiematicSafely(string name, out Cinematic cinematic)
@@ -69,32 +87,40 @@ namespace CustomKnight
             return cinematicUrl.Length > 0;
         }
 
-        private static void XB1CinematicVideoPlayer_ctor(On.XB1CinematicVideoPlayer.orig_ctor orig, XB1CinematicVideoPlayer self, CinematicVideoPlayerConfig config)
+        private static CinematicVideoPlayer CinematicVideoPlayer_Create(
+      Func<CinematicVideoPlayerConfig, CinematicVideoPlayer> orig,
+      CinematicVideoPlayerConfig config)
         {
-            orig(self, config);
-            VideoPlayer source = ReflectionHelper.GetField<XB1CinematicVideoPlayer, VideoPlayer>(self, "videoPlayer"); ;
-            if (source.clip != null)
+            var player = orig(config);
+            if (player is EmbeddedCinematicVideoPlayer embedded)
             {
-                foreach (var cinematicKvp in Cinematics)
+                VideoPlayer source =
+                    ReflectionHelper.GetField<EmbeddedCinematicVideoPlayer, VideoPlayer>(embedded, "videoPlayer");
+                if (source?.clip != null)
                 {
-                    if (cinematicKvp.Value.OriginalVideo != null && (cinematicKvp.Value.OriginalVideo.originalPath == source.clip.originalPath))
+                    foreach (var cinematicKvp in Cinematics)
                     {
-                        cinematicKvp.Value.player = self;
-                        if (SkinManager.GetCurrentSkin().HasCinematic(cinematicKvp.Value.ClipName))
+                        if (cinematicKvp.Value.OriginalVideo != null &&
+                            (cinematicKvp.Value.OriginalVideo.originalPath == source.clip.originalPath))
                         {
-                            source.clip = null;
-                            source.url = SkinManager.GetCurrentSkin().GetCinematicUrl(cinematicKvp.Value.ClipName);
-                            source.Prepare();
-                        }
-                        else if (HasCinematic(cinematicKvp.Value.ClipName))
-                        {
-                            source.clip = null;
-                            source.url = GetCinematicUrl(cinematicKvp.Value.ClipName);
-                            source.Prepare();
+                            cinematicKvp.Value.player = embedded;
+                            if (SkinManager.GetCurrentSkin().HasCinematic(cinematicKvp.Value.ClipName))
+                            {
+                                source.clip = null;
+                                source.url = SkinManager.GetCurrentSkin().GetCinematicUrl(cinematicKvp.Value.ClipName);
+                                source.Prepare();
+                            }
+                            else if (HasCinematic(cinematicKvp.Value.ClipName))
+                            {
+                                source.clip = null;
+                                source.url = GetCinematicUrl(cinematicKvp.Value.ClipName);
+                                source.Prepare();
+                            }
                         }
                     }
                 }
             }
+            return player;
         }
 
 
@@ -120,7 +146,7 @@ namespace CustomKnight
                 {
                     if (cinematic.player != null)
                     {
-                        VideoPlayer source = ReflectionHelper.GetField<XB1CinematicVideoPlayer, VideoPlayer>(cinematic.player, "videoPlayer"); ;
+                        VideoPlayer source = ReflectionHelper.GetField<EmbeddedCinematicVideoPlayer, VideoPlayer>(cinematic.player, "videoPlayer"); ;
                         if ((ulong)source.frame < source.frameCount - 1)
                         {
                             fles.framesSinceBegan = 0;

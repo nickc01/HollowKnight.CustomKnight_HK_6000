@@ -1,15 +1,29 @@
-﻿namespace CustomKnight.Skin.Swapper
+﻿using MonoMod.RuntimeDetour;
+using System.Reflection;
+
+namespace CustomKnight.Skin.Swapper
 {
     internal class PreloadedTk2dSpritesHandler
     {
+        private static Hook _tk2dSpriteAwakeHook;
+
         internal static void Hook()
         {
-            On.tk2dSprite.Awake += Tk2dSprite_Awake;
+            var mi = typeof(tk2dSprite).GetMethod(
+                "Awake",
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic
+            );
+
+            if (mi != null)
+            {
+                _tk2dSpriteAwakeHook = new Hook(mi, (Action<Action<tk2dSprite>, tk2dSprite>)Tk2dSprite_Awake);
+            }
         }
 
         internal static void Unhook()
         {
-            On.tk2dSprite.Awake -= Tk2dSprite_Awake;
+            _tk2dSpriteAwakeHook?.Dispose();
+            _tk2dSpriteAwakeHook = null;
         }
 
         internal static void Enable()
@@ -33,7 +47,7 @@
             }
         }
 
-        private static void Tk2dSprite_Awake(On.tk2dSprite.orig_Awake orig, tk2dSprite tk)
+        private static void Tk2dSprite_Awake(Action<tk2dSprite> orig, tk2dSprite tk)
         {
             orig(tk);
             var path = tk.gameObject.scene.name + "/" + tk.gameObject.GetPath(true);

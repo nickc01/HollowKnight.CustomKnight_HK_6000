@@ -1,5 +1,6 @@
 ﻿using MonoMod.RuntimeDetour.HookGen;
 using UnityEngine.Video;
+using TeamCherry.Cinematics;
 
 namespace CustomKnight.Skin.Cinematics
 {

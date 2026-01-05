@@ -19,6 +19,12 @@
   <Import Project="LocalBuildProperties.props" Condition="Exists('LocalBuildProperties.props')" />
 
   <ItemGroup>
+	<Reference Include="mscorlib">
+      <HintPath>$(VanillaFiles)\mscorlib.dll</HintPath>
+    </Reference>
+    <Reference Include="netstandard">
+      <HintPath>$(VanillaFiles)\netstandard.dll</HintPath>
+    </Reference>
     <Reference Include="Assembly-CSharp">
       <HintPath>$(ModdingAPI)\Assembly-CSharp.dll</HintPath>
     </Reference>
@@ -32,13 +38,22 @@
 		<HintPath>$(ModdingAPi)\MonoMod.RuntimeDetour.dll</HintPath>
 		<Private>false</Private>
 	</Reference>
+	<Reference Include="TeamCherry.Cinematics">
+		<HintPath>$(VanillaFiles)\TeamCherry.Cinematics.dll</HintPath>
+	</Reference>
+	<Reference Include="Newtonsoft.Json">
+      <HintPath>$(VanillaFiles)\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+	<Reference Include="TeamCherry.Localization">
+	  <HintPath>$(VanillaFiles)\TeamCherry.Localization.dll</HintPath>
+	</Reference>
+	<Reference Include="TeamCherry.TK2D">
+	  <HintPath>$(VanillaFiles)\TeamCherry.TK2D.dll</HintPath>
+	</Reference>
 	<Reference Include="MonoMod.Utils">
 		<HintPath>$(ModdingAPi)\MonoMod.Utils.dll</HintPath>
 		<Private>false</Private>
 	</Reference>
-    <Reference Include="Newtonsoft.Json, Version=11.0.0.0, Culture=neutral, PublicKeyToken=null">
-      <HintPath>$(ModdingAPI)\Newtonsoft.Json.dll</HintPath>
-    </Reference>
     <Reference Include="PlayMaker, Version=1.6.0.0, Culture=neutral, PublicKeyToken=null">
       <HintPath>$(VanillaFiles)\PlayMaker.dll</HintPath>
     </Reference>
