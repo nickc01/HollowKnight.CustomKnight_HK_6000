@@ -1,6 +1,5 @@
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using CustomKnight.Skin.Swapper;
 using static Satchel.IoUtils;
 using System.Reflection;
@@ -479,7 +478,7 @@ namespace CustomKnight
             {
                 foreach (KeyValuePair<string, string> kp in ReplaceStrings)
                 {
-                    textValue = Regex.Replace(textValue, Regex.Escape(kp.Key), kp.Value.Replace("$", "$$"), RegexOptions.IgnoreCase);
+                    textValue = ReplaceIgnoreCase(textValue, kp.Key, kp.Value);
                 }
                 //cache for next time
                 ReplaceCache[sheet + key] = new List<string> { orig, textValue };
@@ -622,6 +621,32 @@ namespace CustomKnight
                     }
                 }
             }
+        }
+
+        private static string ReplaceIgnoreCase(string text, string search, string replacement)
+        {
+            if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(search))
+            {
+                return text;
+            }
+
+            var index = 0;
+            var result = new System.Text.StringBuilder(text.Length);
+            while (true)
+            {
+                var matchIndex = text.IndexOf(search, index, StringComparison.OrdinalIgnoreCase);
+                if (matchIndex < 0)
+                {
+                    result.Append(text, index, text.Length - index);
+                    break;
+                }
+
+                result.Append(text, index, matchIndex - index);
+                result.Append(replacement);
+                index = matchIndex + search.Length;
+            }
+
+            return result.ToString();
         }
         internal void AddPathToGopTree(string hashPath, bool isGlobal = true)
         {

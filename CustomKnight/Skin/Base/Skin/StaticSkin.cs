@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using static Satchel.IoUtils;
 namespace CustomKnight
@@ -7,6 +8,7 @@ namespace CustomKnight
     /// </summary>
     internal class StaticSkin : ISelectableSkin, ISupportsOverrides, ISupportsConfig
     {
+        private static readonly TextureRemapper HudRemapper = new TextureRemapper("hud_diff.json");
         internal string SkinDirectory = "";
         private SkinConfig skinConfig;
         private SkinSettings skinSettings;
@@ -44,7 +46,7 @@ namespace CustomKnight
         public bool Exists(string FileName)
         {
             string file = $"{SkinManager.SKINS_FOLDER}/{SkinDirectory}/{FileName}".Replace("\\", "/");
-            return File.Exists(file);
+            return ResolveFilePath(file) != null;
         }
         public Texture2D GetTexture(string FileName)
         {
@@ -53,9 +55,22 @@ namespace CustomKnight
             {
                 string OverriddenFile = GetOverride(FileName);
                 string file = $"{SkinManager.SKINS_FOLDER}/{SkinDirectory}/{OverriddenFile}".Replace("\\", "/");
-                byte[] texBytes = File.ReadAllBytes(file);
+                var resolvedFile = ResolveFilePath(file);
+                if (resolvedFile == null)
+                {
+                    return null;
+                }
+                byte[] texBytes = File.ReadAllBytes(resolvedFile);
                 texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
                 texture.LoadImage(texBytes);
+                if (string.Equals(Path.GetFileName(resolvedFile), "HUD.png", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (HudRemapper.TryRemap(texture, this, out var remapped) && remapped != texture)
+                    {
+                        UnityEngine.Object.Destroy(texture);
+                        texture = remapped;
+                    }
+                }
             }
             catch (Exception e)
             {
@@ -70,7 +85,12 @@ namespace CustomKnight
             {
                 string OverriddenFile = GetOverride(FileName);
                 string file = $"{SkinManager.SKINS_FOLDER}/{SkinDirectory}/{OverriddenFile}".Replace("\\", "/");
-                data = File.ReadAllBytes(file);
+                var resolvedFile = ResolveFilePath(file);
+                if (resolvedFile == null)
+                {
+                    return null;
+                }
+                data = File.ReadAllBytes(resolvedFile);
             }
             catch (Exception e)
             {
@@ -99,12 +119,38 @@ namespace CustomKnight
         {
             string path = "";
             string file = $"{SkinManager.SKINS_FOLDER}/{SkinDirectory}/Cinematics/{CinematicName}".Replace("\\", "/");
-            if (File.Exists(file + ".webm"))
+            var resolvedFile = ResolveFilePath(file + ".webm");
+            if (resolvedFile != null)
             {
-                path = file + ".webm";
+                path = resolvedFile;
             }
             CustomKnight.Instance.LogFine("[GetCinematicUrl]" + CinematicName + ":" + path);
             return path;
+        }
+
+        private static string ResolveFilePath(string path)
+        {
+            if (File.Exists(path))
+            {
+                return path;
+            }
+
+            var directory = Path.GetDirectoryName(path);
+            var fileName = Path.GetFileName(path);
+            if (string.IsNullOrEmpty(directory) || string.IsNullOrEmpty(fileName) || !Directory.Exists(directory))
+            {
+                return null;
+            }
+
+            foreach (var file in Directory.EnumerateFiles(directory))
+            {
+                if (string.Equals(Path.GetFileName(file), fileName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return file;
+                }
+            }
+
+            return null;
         }
 
         public bool HasOverrides(string FileName)

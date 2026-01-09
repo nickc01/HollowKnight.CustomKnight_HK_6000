@@ -9,6 +9,7 @@
     <Deterministic>true</Deterministic>
     <LangVersion>latest</LangVersion>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
 	  
 	  <!-- <NoWarn>CS1591</NoWarn> -->
   </PropertyGroup>
@@ -57,7 +58,6 @@
     <Reference Include="PlayMaker, Version=1.6.0.0, Culture=neutral, PublicKeyToken=null">
       <HintPath>$(VanillaFiles)\PlayMaker.dll</HintPath>
     </Reference>
-    <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />

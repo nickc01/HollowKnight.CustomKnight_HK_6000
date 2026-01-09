@@ -1,11 +1,12 @@
 ﻿using CustomKnight.NewUI;
+using InControl;
+using UnityEngine;
 
 namespace CustomKnight
 {
     internal static class InputListener
     {
         private static Coroutine inputCoroutine;
-
         internal static void Start()
         {
             inputCoroutine = CoroutineHelper.GetRunner().StartCoroutine(ListenForInput());
@@ -15,10 +16,9 @@ namespace CustomKnight
         {
             while (true)
             {
-
                 if (GameManager.instance != null && GameManager.instance.isPaused)
                 {
-                    if (CustomKnight.GlobalSettings.Keybinds.OpenSkinList.WasPressed)
+                    if (IsOpenSkinListPressed())
                     {
                         UIController.ToggleSkinList();
                     }
@@ -34,5 +34,23 @@ namespace CustomKnight
 
         }
 
+        private static bool IsOpenSkinListPressed()
+        {
+            if (CustomKnight.GlobalSettings.Keybinds.OpenSkinList.WasPressed)
+            {
+                return true;
+            }
+
+            var binding = CustomKnight.GlobalSettings.Keybinds.OpenSkinList.GetKeyOrMouseBinding();
+            if (binding.Key != Key.None)
+            {
+                if (System.Enum.TryParse(binding.Key.ToString(), out KeyCode keyCode))
+                {
+                    return Input.GetKeyDown(keyCode);
+                }
+            }
+
+            return Input.GetKeyDown(KeyCode.Delete);
+        }
     }
 }
