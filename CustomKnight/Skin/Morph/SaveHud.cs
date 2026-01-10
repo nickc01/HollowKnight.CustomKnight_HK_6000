@@ -184,17 +184,18 @@ namespace CustomKnight
         }
         public static void GenerateSaveHud(ISelectableSkin skin, Texture2D Hudpng, Texture2D OrbFull)
         {
-            var fHudpng = Hudpng.Flip(true, true);
+            var hudSource = ResolveHudSource(skin, Hudpng);
+            var fHudpng = hudSource.Flip(true, true);
             if (!geoIcon.Exists(skin))
             {
-                geoIcon.useImage(fHudpng, 0f, 553f, 60f, 68f, false, false);
+                geoIcon.useImage(fHudpng, 187f, 713f, 58f, 54f, false, false);
                 geoIcon.rotateTexture(false);
                 geoIcon.CorrectScale(1.1f, 3);
                 geoIcon.Save(skin);
             }
             if (!ggSoulOrb.Exists(skin))
             {
-                ggSoulOrb.useImage(fHudpng, 1507f, 1297f, 167f, 345f, false, false);
+                ggSoulOrb.useImage(fHudpng, 1506f, 1297f, 163f, 338f, false, false);
                 ggSoulOrb.rotateTexture(false);
                 ggSoulOrb.CorrectScale(2f);
                 ggSoulOrb.texture = ggSoulOrb.texture.GetCropped(new Rect(0, 75, ggSoulOrb.size.width, ggSoulOrb.size.height));
@@ -203,7 +204,7 @@ namespace CustomKnight
             }
             if (!hardcoreSoulOrb.Exists(skin))
             {
-                hardcoreSoulOrb.useImage(fHudpng, 0f, 1847f, 501f, 201f, false, false);
+                hardcoreSoulOrb.useImage(fHudpng, 1f, 1847f, 504f, 200f, false, false);
                 hardcoreSoulOrb.texture = hardcoreSoulOrb.texture.Flip(false, true);
                 hardcoreSoulOrb.CorrectScale();
                 hardcoreSoulOrb.Overlay(SheetItem.ScaleTexture(OrbFull, 109, 109), 128, 81);
@@ -211,21 +212,21 @@ namespace CustomKnight
             }
             if (!normalHealth.Exists(skin))
             {
-                normalHealth.useImage(fHudpng, 275f, 813f, 65f, 59f, false, false);
+                normalHealth.useImage(fHudpng, 1091f, 478f, 70f, 57f, false, false);
                 normalHealth.rotateTexture(false);
                 normalHealth.CorrectScale();
                 normalHealth.Save(skin);
             }
             if (!normalSoulOrb.Exists(skin))
             {
-                normalSoulOrb.useImage(fHudpng, 75f, 681f, 45f, 48f, false, false);
+                normalSoulOrb.useImage(fHudpng, 196f, 828f, 62f, 60f, false, false);
                 normalSoulOrb.rotateTexture(true);
                 normalSoulOrb.CorrectScale();
                 normalSoulOrb.Save(skin);
             }
             if (!soulOrbIcon.Exists(skin))
             {
-                soulOrbIcon.useImage(fHudpng, 1360f, 1621f, 147f, 246f, false, false);
+                soulOrbIcon.useImage(fHudpng, 1360f, 1621f, 144f, 239f, false, false);
                 soulOrbIcon.rotateTexture(false);
                 soulOrbIcon.CorrectScale(1.1f, 5);
                 soulOrbIcon.Overlay(SheetItem.ScaleTexture(OrbFull, 82, 82), 52, 42);
@@ -233,14 +234,14 @@ namespace CustomKnight
             }
             if (!steelHealth.Exists(skin))
             {
-                steelHealth.useImage(fHudpng, 275f, 813f, 65f, 59f, false, false);
+                steelHealth.useImage(fHudpng, 1091f, 478f, 70f, 57f, false, false);
                 steelHealth.rotateTexture(false);
                 steelHealth.CorrectScale();
                 steelHealth.Save(skin);
             }
             if (!steelSoulOrb.Exists(skin))
             {
-                steelSoulOrb.useImage(fHudpng, 75f, 681f, 45f, 48f, false, false);
+                steelSoulOrb.useImage(fHudpng, 196f, 828f, 62f, 60f, false, false);
                 steelSoulOrb.rotateTexture(true);
                 steelSoulOrb.CorrectScale();
                 steelSoulOrb.Save(skin);
@@ -253,6 +254,36 @@ namespace CustomKnight
                 brokenSteelOrb.Save(skin);
             }
         }
+
+        private static Texture2D ResolveHudSource(ISelectableSkin skin, Texture2D fallbackHud)
+        {
+            try
+            {
+                var bytes = skin?.GetFile("HUD.png");
+                if (bytes == null || bytes.Length == 0)
+                {
+                    return fallbackHud;
+                }
+
+                var rawHud = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                rawHud.LoadImage(bytes);
+
+                var remapper = new TextureRemapper("hud_diff.json");
+                if (remapper.TryRemap(rawHud, skin, out var remapped) && remapped != rawHud)
+                {
+                    UnityEngine.Object.Destroy(rawHud);
+                    return remapped;
+                }
+
+                return rawHud;
+            }
+            catch (Exception e)
+            {
+                CustomKnight.Instance.Log($"[SaveHud] ResolveHudSource failed: {e}");
+                return fallbackHud;
+            }
+        }
+
 
         internal static void LoadAll()
         {
