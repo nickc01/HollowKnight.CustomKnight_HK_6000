@@ -60,8 +60,9 @@ namespace CustomKnight
                 var height = texture.height;
                 var output = new Texture2D(width, height, TextureFormat.RGBA32, false);
                 var pixels = texture.GetPixels32();
-                var clearPixels = new Color32[width * height];
-                output.SetPixels32(clearPixels);
+                var inputTop = FlipV(pixels, width, height);
+                var outputTop = new Color32[inputTop.Length];
+                Array.Copy(inputTop, outputTop, inputTop.Length);
 
                 foreach (var entry in mapping.Values)
                 {
@@ -70,15 +71,15 @@ namespace CustomKnight
                         continue;
                     }
 
-                    var oldRect = ToUnityRect(entry.src, height);
-                    var newRect = entry.dst == null ? oldRect : ToUnityRect(entry.dst, height);
+                    var oldRect = ToTopLeftRect(entry.src);
+                    var newRect = entry.dst == null ? oldRect : ToTopLeftRect(entry.dst);
 
                     if (!IsValidRect(oldRect, width, height) || !IsValidRect(newRect, width, height))
                     {
                         continue;
                     }
 
-                    var spritePixels = GetPixels32Rect(pixels, width, oldRect);
+                    var spritePixels = GetPixels32Rect(inputTop, width, oldRect);
                     var rotate = entry.rotate ?? 0;
                     var flipH = entry.flipH ?? false;
                     var flipV = entry.flipV ?? false;
@@ -92,9 +93,12 @@ namespace CustomKnight
                         tH = newRect.height;
                     }
 
-                    output.SetPixels32(newRect.x, newRect.y, tW, tH, transformed);
+                    ClearRect(outputTop, width, newRect);
+                    SetPixels32Rect(outputTop, width, newRect, transformed);
                 }
 
+                var outputPixels = FlipV(outputTop, width, height);
+                output.SetPixels32(outputPixels);
                 output.Apply();
                 remapped = output;
                 return true;
@@ -148,13 +152,12 @@ namespace CustomKnight
             }
         }
 
-        private static RectInt ToUnityRect(DiffSpriteRect rect, int texHeight)
+        private static RectInt ToTopLeftRect(DiffSpriteRect rect)
         {
             var w = Mathf.RoundToInt(rect.w);
             var h = Mathf.RoundToInt(rect.h);
             var x = Mathf.RoundToInt(rect.x);
-            var yTop = Mathf.RoundToInt(rect.y);
-            var y = texHeight - yTop - h;
+            var y = Mathf.RoundToInt(rect.y);
             return new RectInt(x, y, w, h);
         }
 
@@ -164,10 +167,10 @@ namespace CustomKnight
                    rect.x + rect.width <= width && rect.y + rect.height <= height;
         }
 
-        private static void ClearRect(Texture2D texture, RectInt rect)
+        private static void ClearRect(Color32[] pixels, int textureWidth, RectInt rect)
         {
             var transparent = new Color32[rect.width * rect.height];
-            texture.SetPixels32(rect.x, rect.y, rect.width, rect.height, transparent);
+            SetPixels32Rect(pixels, textureWidth, rect, transparent);
         }
 
         private static Color32[] GetPixels32Rect(Color32[] pixels, int textureWidth, RectInt rect)
@@ -180,6 +183,16 @@ namespace CustomKnight
                 Array.Copy(pixels, srcIndex, result, dstIndex, rect.width);
             }
             return result;
+        }
+
+        private static void SetPixels32Rect(Color32[] pixels, int textureWidth, RectInt rect, Color32[] src)
+        {
+            for (var y = 0; y < rect.height; y++)
+            {
+                var dstIndex = (rect.y + y) * textureWidth + rect.x;
+                var srcIndex = y * rect.width;
+                Array.Copy(src, srcIndex, pixels, dstIndex, rect.width);
+            }
         }
 
         private static Color32[] ApplyTransform(Color32[] pixels, int width, int height, int rotate, bool flipH, bool flipV, bool rotateFirst, out int outWidth, out int outHeight)
@@ -306,8 +319,8 @@ namespace CustomKnight
             return pixels;
         }
 
-        private static Color32[] ScaleNearest(Color32[] pixels, int width, int height, int targetWidth, int targetHeight)
-        {
+    private static Color32[] ScaleNearest(Color32[] pixels, int width, int height, int targetWidth, int targetHeight)
+    {
             var result = new Color32[targetWidth * targetHeight];
             for (var y = 0; y < targetHeight; y++)
             {
@@ -318,8 +331,8 @@ namespace CustomKnight
                     result[y * targetWidth + x] = pixels[srcY * width + srcX];
                 }
             }
-            return result;
-        }
+        return result;
+    }
 
     }
 }
